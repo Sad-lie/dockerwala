@@ -1,0 +1,36 @@
+defmodule Dockerwala.Application do
+  # See https://hexdocs.pm/elixir/Application.html
+  # for more information on OTP Applications
+  @moduledoc false
+
+  use Application
+
+  @impl true
+  def start(_type, _args) do
+    children = [
+      DockerwalaWeb.Telemetry,
+      Dockerwala.Repo,
+      {DNSCluster, query: Application.get_env(:dockerwala, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: Dockerwala.PubSub},
+      # Start the Finch HTTP client for sending emails
+      {Finch, name: Dockerwala.Finch},
+      # Start a worker by calling: Dockerwala.Worker.start_link(arg)
+      # {Dockerwala.Worker, arg},
+      # Start to serve requests, typically the last entry
+      DockerwalaWeb.Endpoint
+    ]
+
+    # See https://hexdocs.pm/elixir/Supervisor.html
+    # for other strategies and supported options
+    opts = [strategy: :one_for_one, name: Dockerwala.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  # Tell Phoenix to update the endpoint configuration
+  # whenever the application is updated.
+  @impl true
+  def config_change(changed, _new, removed) do
+    DockerwalaWeb.Endpoint.config_change(changed, removed)
+    :ok
+  end
+end
